@@ -32,29 +32,36 @@ const scrapeMaterials = async (url) => {
     const $ = cheerio.load(data, {
       xml: true,
     });
-    const materialElements = $("button:contains('Materials & Care') + div div div ul li:first-child span");
-    //const materialElements = $('h3 + ul li p'); // for H & M
+    //const materialElements = $('button[data-test-toggle="true"][aria-expanded="false"] + div div div ul li span');
+    const materialElements = $("button:contains('Materials & Care') + div div ul li span");
+    // const materialElements = $("button:contains('Materials & Care') + div div div ul li:first-child span");
+    // const materialElements = $('h3 + ul li p'); // for H & M
     //const materialElements = $('h3')
     // Stores data for all materials
+    console.log(materialElements)
+
     let materials = new Map();
-    // ssconsole.log(data)
     materialElements.each((index, element) => {
       let text = $(element).text();
+      console.log(text)
       keywords.forEach((keyword) => {
         if (text.includes(keyword)) {
           // Extract percentage of material
-          let percent = "";
-          const index = text.lastIndexOf(keyword);
-          if (index !== -1) {
-            percent = text.substring(index + keyword.length + 1, index + keyword.length + 4).replace("%", "");
-          }
-          if (percent !== "") {
-            // Populate materials dictionary
-            materials.set(keyword, percent);
+          const regex = /(\d+)%\s*([a-zA-Z]+)/;
+          // Use the test() method with the regular expression to check if the string contains a percentage
+          if (regex.test(text)) {
+            const match = text.match(regex);
+            // Extracted percentage value
+            const percentage = parseInt(match[1]);
+            // Extracted material name
+            const materialName = match[2];
+            materials.set(materialName, percentage);
           }
         }
       });
     });
+    console.log(Object.fromEntries(materials))
+
     let materialObj = Object.fromEntries(materials);
     let materialSimp = {};
     let percent = 0;
