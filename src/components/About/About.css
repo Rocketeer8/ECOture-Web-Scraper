@@ -1,0 +1,26 @@
+.about-page {
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+  margin-left: 100px;
+}
+
+.about-page h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  letter-spacing: 0cm;
+  font-family: "Poiret One";
+  color:burlywood;
+  text-transform: inherit;
+  margin-top: 150px;
+  margin-left: 100px;
+}
+
+.about-page p {
+  font-size: 1.2rem;
+  line-height: 1.5;
+  margin-top: 10px;
+  margin-left: 100px;
+}
+
