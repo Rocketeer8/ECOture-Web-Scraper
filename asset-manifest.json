@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/static/css/main.e4049b43.css",
-    "main.js": "/static/js/main.638ff49a.js",
-    "static/js/453.ed3810f9.chunk.js": "/static/js/453.ed3810f9.chunk.js",
-    "index.html": "/index.html",
-    "main.e4049b43.css.map": "/static/css/main.e4049b43.css.map",
-    "main.638ff49a.js.map": "/static/js/main.638ff49a.js.map",
-    "453.ed3810f9.chunk.js.map": "/static/js/453.ed3810f9.chunk.js.map"
+    "main.css": "/ECOture-Web-Scraper/static/css/main.e4049b43.css",
+    "main.js": "/ECOture-Web-Scraper/static/js/main.a71b2698.js",
+    "static/js/453.ed3810f9.chunk.js": "/ECOture-Web-Scraper/static/js/453.ed3810f9.chunk.js",
+    "index.html": "/ECOture-Web-Scraper/index.html",
+    "main.e4049b43.css.map": "/ECOture-Web-Scraper/static/css/main.e4049b43.css.map",
+    "main.a71b2698.js.map": "/ECOture-Web-Scraper/static/js/main.a71b2698.js.map",
+    "453.ed3810f9.chunk.js.map": "/ECOture-Web-Scraper/static/js/453.ed3810f9.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e4049b43.css",
-    "static/js/main.638ff49a.js"
+    "static/js/main.a71b2698.js"
   ]
 }
