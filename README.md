@@ -1,3 +1,5 @@
+http://clothing-material-web-scraper-site.s3-website.us-east-2.amazonaws.com/
+
 # Description
 This project efficiently extracts material data from Old Navy clothing items through web crawlers and provides an Eco-friendliness score given an Old Navy clothing item URL. Created frontend with ReactJS, implementing action events such as state changes and routers. The server was deployed on AWS EC3 using Node.js, and database records for clothing material were created in MongoDB.
 
