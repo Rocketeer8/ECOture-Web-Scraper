@@ -38,42 +38,55 @@ const scrapeMaterials = async (url) => {
     // const materialElements = $('h3 + ul li p'); // for H & M
     //const materialElements = $('h3')
     // Stores data for all materials
-    console.log(materialElements)
-
     let materials = new Map();
+    let totalPercentage = 0;
     materialElements.each((index, element) => {
       let text = $(element).text();
-      console.log(text)
-      keywords.forEach((keyword) => {
-        if (text.includes(keyword)) {
-          // Extract percentage of material
-          const regex = /(\d+)%\s*([a-zA-Z]+)/;
+      // split the bullet point based on comma
+      const sentenceParts = text.split(',').map(item => item.trim());
+
+      sentenceParts.forEach((part) => {
+          // Extract percentage of material and name of the material
+          // the following regex capture group before the percentage sign, 
+          // then capture everything after one or more whitespaces after the percentage sign, 
+          // capture groups is denoted by ()
+          const regex = /(\d+)%\s*(.*)/;
           // Use the test() method with the regular expression to check if the string contains a percentage
-          if (regex.test(text)) {
-            const match = text.match(regex);
+          if (regex.test(part)) {
+            const match = part.match(regex);
             // Extracted percentage value
-            const percentage = parseInt(match[1]);
+            const currentPercentage = parseInt(match[1]);
             // Extracted material name
-            const materialName = match[2];
-            materials.set(materialName, percentage);
+            const materialName = match[2].toUpperCase();
+
+            if (!materials.has(materialName)) {
+              materials.set(materialName, currentPercentage);
+            }
           }
-        }
       });
     });
-    console.log(Object.fromEntries(materials))
+    console.log("All materials: " + JSON.stringify(Object.fromEntries(materials)))
 
     let materialObj = Object.fromEntries(materials);
+    // materialSimp is to determine the known material % and unknwon percentage
     let materialSimp = {};
-    let percent = 0;
 
     for (const key in materialObj) {
-    // total percentage of materialSimp can't go over 100
-      percent = percent + parseInt(materialObj[key]);
-      if (percent <= 100) {
+    // total percentage of materialSimp can't go over 100, 
+      if (totalPercentage + materialObj[key] <= 100) {
         materialSimp[key] = materialObj[key]
+        totalPercentage = totalPercentage + materialObj[key];
+      } else {
+        break;
       }
     }
-    let score = 0.76 + 1 + 0.28;
+
+    // if total material composition is not 100%, set the remaining percentage to unknwon 
+    if (totalPercentage < 100) {
+      materialSimp["UNKNOWN"] = 100 - totalPercentage
+    }
+
+    let score = 0;
     async function run() {
       try {
         // open connection to mongodb
@@ -81,23 +94,58 @@ const scrapeMaterials = async (url) => {
         // find a database call "db"
         const db = client.db('db');
         const coll = db.collection('Materials');
-        const query = coll.find({});
 
-        console.log(materialSimp)
-        //console.log(query)
+
+        console.log("materialSimp: " + JSON.stringify(materialSimp))
+        for (const material in materialSimp) {
+
+          // Query MongoDB to find the material in the collection
+          const foundMaterial = await coll.findOne({ name: material });
+
+          // If material not found in the database, update materialNames object
+          if (!foundMaterial) {
+              // Increase the percentage of UNKNOWN material by the percentage of the missing material
+              materialSimp.UNKNOWN += materialSimp[material];
+              // Remove the missing material from the materialNames object
+              delete materialSimp[material];
+          } else if (material != "UNKNOWN") { 
+            // add material to score if it's found in database and it's not unknown, 
+            // bc unknown percentage can still change, therefore add it at the end
+            // (materialSimp[key] / 100) signify the percentage of the current material, ex: 75/100 is 0.75
+            score = score + parseInt(foundMaterial.score) * (materialSimp[material] / 100);
+          }
+      }
+      // add unknown material to the total score, assume it's netural eco friendly (50 out of 100) 
+      if (materialSimp.hasOwnProperty('UNKNOWN')) {
+        score = score + 50 * (materialSimp["UNKNOWN"] / 100);
+      }
+
+
+      console.log("materialSimp: " + JSON.stringify(materialSimp))
+
+        /*
+        const query = coll.find();
+
+        console.log("materialSimp: " + JSON.stringify(materialSimp))
+
+        console.log("query below: ")
         for (const key in materialSimp) {
-          await query.forEach(function (materials) {
-            // materials here is from the mongodb, it is all uppercase
-            if (materials.name === key.toUpperCase()) {
+          for await (const dbMaterial of query) {
+            // dbMaterial is from the mongodb, it is all uppercase
+            if (dbMaterial.name === key.toUpperCase()) {
               score = score + materials.score * (parseInt(materialSimp[key]) / 100);
             }
-          });
-        };
-
+          }
+        }
+        */
       } finally {
         // Ensures that the client will close when you finish/error
         await client.close();
-        return {materialScore: score, materialList: materialSimp};
+
+        // return the score (at most two decimal digits) and material list, 
+        const roundedScore = parseFloat(score.toFixed(2))
+        
+        return {materialScore: roundedScore, materialList: materialSimp};
       }
     }
     // run().catch(console.dir);

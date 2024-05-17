@@ -1,8 +1,17 @@
-.search-container {
+
+.page{
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 5%;
+  flex-direction: column;
+  align-items: center; /* Aligns items horizontally */
+  margin-top: 20%;
+}
+
+.search-container {
+  margin-top: 1vh;
+}
+
+.search-text {
+  font-weight: bold;
 }
 
 .search-input {

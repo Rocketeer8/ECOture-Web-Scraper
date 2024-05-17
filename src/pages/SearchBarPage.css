@@ -1,0 +1,13 @@
+.search-bar-page {
+    margin-top: 10%;
+  }
+  
+  .search-bar-column {
+    float: left;
+    width: 50%;
+    
+  }
+  .carousel-column {
+    float: right;
+    width: 50%;
+  }

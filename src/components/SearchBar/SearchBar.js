@@ -1,39 +1,50 @@
-import React, {useState} from "react";
-import { scrapeName, scrapeImage, scrapeMaterials} from "./scraper.js";
-import "./SearchBar.css";
-import ProductCard from "../ProductCard/ProductCard.js";
+import React, { useState } from "react";
 import axios from "axios";
+import "./SearchBar.css";
+import Popup from "../Popup/Popup.js";
 
 const SearchBar = () => {
-  // itemUrl here can't be changed since it's const, change by using the setItemUrl()
   const [itemUrl, setItemUrl] = useState('');
   const [name, setName] = useState('');
   const [image, setImage] = useState('');
   const [materials, setMaterials] = useState({});
-  const [search, isSearch] = useState(false);
+  const [searching, setSearching] = useState(false); // Add a searching state for loading
+  const [searched, setSearched] = useState(false);
 
   const config = {
     header: {
-      "Access-Control-Allow-Origin" : "*"
+      "Access-Control-Allow-Origin": "*"
     },
   };
 
   const onSearch = async () => {
-    // server.js listens for any url with local server ip(127.0.0.1), port 5000, and /scrape extension
-    let {data} = await axios.get(`http://127.0.0.1:5000/scrape?url=${itemUrl}`, config);
-    setName(data.name);
-    setImage(data.image);
-    setMaterials(data.materials);
-    isSearch(true);
-  }
+    // searching is true after after search button is clicked, and became false after scraping and loading everything
+    setSearching(true); // Set searching to true while waiting for response
+    try {
+      // const { data } = await axios.get(`http://beach-web-proxy.xyz:5000/scrape?url=${itemUrl}`, config);
+      const { data } = await axios.get(`http://10.0.0.67:5000/scrape?url=${itemUrl}`, config);
+      setName(data.name);
+      setImage(data.image);
+      setMaterials(data.materials);
+      setSearched(true);
+    } catch (error) {
+      console.error("Error searching:", error);
+    } finally {
+      setSearching(false); // Reset searching state after response
+    }
+  };
+
+  const resetSearch = () => {
+    setSearched(false);
+  };
 
   return (
     <div className="page">
+      <div className="search-text"> <h3>Enter Old Navy clothing URL below for compositions and eco-score!</h3></div>
       <div className="search-container">
         <input
           type="text"
           placeholder="Search..."
-          // onChange fires everytime you enter a key on your keyboard
           onChange={event => setItemUrl(event.target.value)}
           className="search-input"
         />
@@ -42,14 +53,24 @@ const SearchBar = () => {
         </button>
       </div>
       <div className="search-output">
-        {/* Check if isSearch is true */}
-        <ProductCard
-          name={name}
-          image={image}
-          materials={materials}
-        ></ProductCard>
+        {/* Render loading spinner while searching */}
+        {searching && (
+          <div className="loading-spinner">
+            <h2>Calculating, please wait...</h2>
+          </div>
+        )}
+
+        {/* Show pop-up only if search is complete */}
+        {searched && (
+          <Popup
+            name={name}
+            image={image}
+            materials={materials}
+            onClose={resetSearch}
+          />
+        )}
       </div>
-  </div>
+    </div>
   );
 }
 
