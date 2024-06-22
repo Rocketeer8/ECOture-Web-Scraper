@@ -24,6 +24,7 @@ const Carousel = () => {
     centerMode: true, // Enable center mode
     centerPadding: '5%', // Adjust padding as needed
   };
+  
   const handleNextSlide = () => {
     if (sliderRef.current) {
       sliderRef.current.slickNext(); // Move to the next slide
@@ -48,4 +49,3 @@ const Carousel = () => {
 };
 
 export default Carousel;
-

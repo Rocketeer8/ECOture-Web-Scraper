@@ -1,0 +1,83 @@
+/* General styles for the Landing page */
+
+
+  /* Ensure the header spans the full width */
+.landing-page header {
+    width: 100%;
+  }
+  
+  /* Styles for the About component */
+  .about-page {
+    display: flex;
+    flex-direction: column;
+    max-width: 420px;
+    margin-left: 100px;
+    text-align: left;
+  }
+  
+  .about-page h1 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-family: "Poiret One";
+    color: burlywood;
+    text-transform: inherit;
+    margin-top: 150px;
+    margin-left: 100px;
+  }
+  
+  .about-page p {
+    font-size: 1.2rem;
+    line-height: 1.5;
+    margin-top: 10px;
+    margin-left: 100px;
+  }
+  
+  /* Styles for the TryButton component */
+  .button-container {
+    margin-left: 200px;
+  }
+  
+  .Button {
+    size: 500%;
+    background-color: beige;
+    cursor: pointer;
+    font-size: 20px;
+    font-family: "Calibri";
+  }
+  
+  /* Styles for screens smaller than 768px */
+  @media (max-width: 768px) {
+    .landing-page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+      }
+  
+    .about-page {
+      margin-left: 0;
+      text-align: center;
+      margin-top: 50px;
+    }
+  
+    .about-page h1 {
+      font-size: 1.5rem;
+      margin-left: 0;
+    }
+  
+    .about-page p {
+      font-size: 1rem;
+      margin-left: 0;
+    }
+  
+    .button-container {
+      margin-left: 0;
+      text-align: center;
+    }
+  
+    .Button {
+      font-size: 1rem;
+    }
+  }
+  

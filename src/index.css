@@ -6,7 +6,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image: url('https://img.freepik.com/free-photo/greenery-frame-watercolor-green_53876-105303.jpg?w=2000');
-  background-size: cover;
+  background-size: cover; /* Ensure the background covers the entire element */
+  background-position: center; /* Center the background image */
+  background-repeat: no-repeat; /* Prevent background image from repeating */
+  background-attachment: fixed; /* Fix the background image to prevent scrolling */
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 code {

@@ -1,13 +1,33 @@
 .search-bar-page {
-    margin-top: 10%;
+  display: flex;
+  justify-content: center; /* Center items horizontally */
+  align-items: center; /* Center contents vertically */
+  margin: 10%; /* Adjust margin for top spacing */
+}
+
+.search-bar-column {
+  width: 50%; /* Initially set to half of the container width */
+  max-width: 600px; /* Limit maximum width */
+  margin-bottom: 20px; /* Add bottom margin */
+  margin-right: 10rem;
+}
+
+.carousel-column {
+  width: 50%; /* Initially set to half of the container width */
+  max-width: 600px; /* Limit maximum width */
+}
+
+@media (max-width: 768px) {
+  .search-bar-page {
+    flex-direction: column; /* Stack columns vertically on smaller screens */
+    align-items: center; /* Center items horizontally */
+    margin-top: 20%; /* Adjust margin for smaller screens */
   }
-  
-  .search-bar-column {
-    float: left;
-    width: 50%;
-    
-  }
+
+  .search-bar-column,
   .carousel-column {
-    float: right;
-    width: 50%;
+    width: 90%; /* Adjust width for better readability on smaller screens */
+    max-width: none; /* Remove maximum width constraint */
+    margin: 10px; /* Adjust bottom margin */
   }
+}
