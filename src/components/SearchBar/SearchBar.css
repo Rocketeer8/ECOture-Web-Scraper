@@ -49,6 +49,7 @@
   cursor: pointer;
   font-size: 16px;
   padding: 8px 16px;
+  max-width: 300px; /* Limit the maximum width */
 }
 
 .search-button:hover {
@@ -61,4 +62,21 @@
   align-items: center;
   justify-content: center;
   margin-top: 20px; /* Adjust spacing */
+}
+
+/* Media query for mobile screens */
+@media (max-width: 600px) {
+  .search-container {
+    flex-direction: column; /* Stack input and button vertically */
+  }
+
+  .search-input {
+    margin-right: 0;
+    margin-bottom: 8px;
+    max-width: 100%; /* Allow full width on mobile */
+  }
+
+  .search-button {
+    width: 100%; /* Allow full width on mobile */
+  }
 }

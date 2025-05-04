@@ -21,7 +21,7 @@ const SearchBar = () => {
     // searching is true after after search button is clicked, and became false after scraping and loading everything
     setSearching(true); // Set searching to true while waiting for response
     try {
-      const { data } = await axios.get(`http://beach-web-proxy.xyz:5000/scrape?url=${itemUrl}`, config);
+      const { data } = await axios.get(`http://danny-proxy-server.best:5000/scrape?url=${itemUrl}`, config);
       // const { data } = await axios.get(`http://10.0.0.67:5000/scrape?url=${itemUrl}`, config);
       setName(data.name);
       setImage(data.image);
