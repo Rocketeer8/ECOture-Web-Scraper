@@ -23,6 +23,11 @@ async function withProductPage(url, handler) {
     userAgent: USER_AGENT,
     locale: "en-US",
     ignoreHTTPSErrors: true,
+    extraHTTPHeaders: {
+      "Accept-Language": "en-US,en;q=0.9",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Upgrade-Insecure-Requests": "1",
+    },
   });
   // Skip loading heavy assets to speed up hydration.
   await context.route(
@@ -33,7 +38,13 @@ async function withProductPage(url, handler) {
 
   try {
     console.log(`[scraper] navigating to ${url}`);
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    } catch (firstErr) {
+      console.warn(`[scraper] first goto failed (${firstErr.message}), retrying once...`);
+      await page.waitForTimeout(500);
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
     // Wait briefly for key elements instead of full network idle.
     await page.waitForSelector("button:has-text('Fabric'), button:has-text('Fabric & care')", {
       timeout: 8000,
