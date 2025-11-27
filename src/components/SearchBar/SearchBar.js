@@ -11,7 +11,7 @@ const SearchBar = () => {
   const [searching, setSearching] = useState(false); // Add a searching state for loading
   const [searched, setSearched] = useState(false);
 
-  const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+  const API_BASE = process.env.REACT_APP_API_BASE || "https://ecoture-web-scraper.onrender.com";
 
   const onSearch = async () => {
     // searching is true after after search button is clicked, and became false after scraping and loading everything

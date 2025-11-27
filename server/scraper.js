@@ -69,6 +69,17 @@ async function extractMaterialTexts(page) {
   await page.waitForSelector(targetSelector, { timeout: 6000 }).catch(() => {});
   await page.waitForSelector("ul li span, dd", { timeout: 6000 }).catch(() => {});
 
+  // Try expanding the accordion if it's present.
+  try {
+    const expandBtn = await page.$("button:has-text('Fabric'), button:has-text('Fabric & care')");
+    if (expandBtn) {
+      await expandBtn.click({ timeout: 2000 }).catch(() => {});
+      await page.waitForTimeout(300);
+    }
+  } catch (e) {
+    // ignore
+  }
+
   const trySelectors = async () => {
     for (const selector of MATERIAL_SELECTORS) {
       const materials = await page
