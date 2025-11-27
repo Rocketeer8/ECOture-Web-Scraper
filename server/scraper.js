@@ -1,189 +1,201 @@
-const axios = require("axios")
-const cheerio = require("cheerio")
+const { chromium } = require("playwright");
 const { MongoClient } = require("mongodb");
 
 const uri = "mongodb+srv://Danny:kuGQ8J04owk8XidB@cluster0.yhcwz4g.mongodb.net/?retryWrites=true&w=majority";
-const client = new MongoClient(uri);
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36";
 
-// const keywords = ['Cotton', 'Polyester', 'Linen', 'Viscose', 'Wool']; // Clothing materials to extract for H&M 
-const keywords = ['cotton', 'polyester', 'linen', 'viscose', 'wool']; // Clothing materials to extract for Old Navy 
-const config = {
-  header: {
-    "Access-Control-Allow-Origin": "*"
-  },
-};
-const scrapeName = async (url) => {
+const MATERIAL_SELECTORS = [
+  "button:has-text('Fabric') + div div div ul li span",
+  "button:has-text('Fabric & care') + div div div ul li span",
+  "button:has-text('Fabric & Care') + div div div ul li span",
+  "button:has-text('Materials') + div div ul li span",
+];
+
+const UNKNOWN_MATERIAL_SCORE = 50; // assumed neutral score for unknown materials
+
+async function withProductPage(url, handler) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    userAgent: USER_AGENT,
+    locale: "en-US",
+  });
+  // Skip loading heavy assets to speed up hydration.
+  await context.route(
+    "**/*.{png,jpg,jpeg,gif,webp,avif,svg,woff,woff2,ttf,otf}",
+    (route) => route.abort()
+  );
+  const page = await context.newPage();
+
   try {
-    // Fetch HTML of the page we want to scrape
-    let {data} = await axios.get(url, config);
-    // Load HTML fetched in the previous line
-    let $ = cheerio.load(data);
-    // Select all the list items in the h1 class
-    let name = $('h1').text();
-    return name;
-  } catch (err) {
-    console.error(err);
+    console.log(`[scraper] navigating to ${url}`);
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // Wait briefly for key elements instead of full network idle.
+    await page.waitForSelector("button:has-text('Fabric'), button:has-text('Fabric & care')", {
+      timeout: 8000,
+    }).catch(() => {});
+    // Small pause to allow content to hydrate.
+    await page.waitForTimeout(500);
+    const title = await page.title().catch(() => "");
+    console.log(`[scraper] loaded url=${page.url()} title="${title}"`);
+    const html = await page.content();
+    if (html.includes("CookieFailure")) {
+      throw new Error("Blocked by CookieFailure page; try different headers/cookies or a non-headless run.");
+    }
+    return await handler(page);
+  } finally {
+    await browser.close();
   }
 }
-const scrapeMaterials = async (url) => {
-  try {
-    let {data} = await axios.get(url, config);
-    // without xml :ture returned html would be incomplete
-    const $ = cheerio.load(data, {
-      xml: true,
-    });
-    //const materialElements = $('button[data-test-toggle="true"][aria-expanded="false"] + div div div ul li span');
-    const materialElements = $("button:contains('Materials & Care') + div div ul li span");
-    // const materialElements = $("button:contains('Materials & Care') + div div div ul li:first-child span");
-    // const materialElements = $('h3 + ul li p'); // for H & M
-    //const materialElements = $('h3')
-    // Stores data for all materials
-    let materials = new Map();
-    let totalPercentage = 0;
-    materialElements.each((index, element) => {
-      let text = $(element).text();
-      // split the bullet point based on comma
-      const sentenceParts = text.split(',').map(item => item.trim());
 
-      sentenceParts.forEach((part) => {
-          // Extract percentage of material and name of the material
-          // the following regex capture group before the percentage sign, 
-          // then capture everything after one or more whitespaces after the percentage sign, 
-          // capture groups is denoted by ()
-          const regex = /(\d+)%\s*(.*)/;
-          // Use the test() method with the regular expression to check if the string contains a percentage
-          if (regex.test(part)) {
-            const match = part.match(regex);
-            // Extracted percentage value
-            const currentPercentage = parseInt(match[1]);
-            // Extracted material name
-            const materialName = match[2].toUpperCase();
+async function extractName(page) {
+  const name = await page.$eval("h1", (el) => el.textContent.trim()).catch(() => "");
+  return name;
+}
 
-            if (!materials.has(materialName)) {
-              materials.set(materialName, currentPercentage);
-            }
-          }
-      });
-    });
-    console.log("All materials: " + JSON.stringify(Object.fromEntries(materials)))
+async function extractImage(page) {
+  const imageUrl = await page
+    .$eval("img[src*='webcontent']", (el) => {
+      const src = el.getAttribute("src") || "";
+      return src.startsWith("http") ? src : `https://oldnavy.gapcanada.ca${src}`;
+    })
+    .catch(() => "");
+  return imageUrl;
+}
 
-    let materialObj = Object.fromEntries(materials);
-    // materialSimp is to determine the known material % and unknwon percentage
-    let materialSimp = {};
+async function extractMaterialTexts(page) {
+  // Wait for the materials accordion/button to exist before querying spans.
+  const targetSelector = "button:has-text('Fabric'), button:has-text('Fabric & care'), button[title*='Fabric'] + div ul li span";
+  await page.waitForSelector(targetSelector, { timeout: 6000 }).catch(() => {});
+  await page.waitForSelector("ul li span, dd", { timeout: 6000 }).catch(() => {});
 
-    for (const key in materialObj) {
-    // total percentage of materialSimp can't go over 100, 
-      if (totalPercentage + materialObj[key] <= 100) {
-        materialSimp[key] = materialObj[key]
-        totalPercentage = totalPercentage + materialObj[key];
-      } else {
-        break;
+  const trySelectors = async () => {
+    for (const selector of MATERIAL_SELECTORS) {
+      const materials = await page
+        .$$eval(selector, (els) => els.map((el) => el.textContent.trim()).filter(Boolean))
+        .catch(() => []);
+      if (materials.length) {
+        console.log(`Material selector matched "${selector}" ->`, materials);
+        return materials;
       }
+      console.log(`Material selector found nothing for "${selector}"`);
     }
+    return [];
+  };
 
-    // if total material composition is not 100%, set the remaining percentage to unknwon 
-    if (totalPercentage < 100) {
-      materialSimp["UNKNOWN"] = 100 - totalPercentage
-    }
+  let materials = await trySelectors();
+  if (!materials.length) {
+    // Quick retry after a short delay to catch late hydration.
+    await page.waitForTimeout(500);
+    materials = await trySelectors();
+  }
 
-    let score = 0;
-    async function run() {
-      try {
-        // open connection to mongodb
-        await client.connect();
-        // find a database call "db"
-        const db = client.db('db');
-        const coll = db.collection('Materials');
+  if (materials.length) {
+    return materials;
+  }
 
+  // Fallback: scan any list items/spans with percentages to see if materials are present elsewhere.
+  const fallback = await page
+    .$$eval("li, p, span, dd", (els) =>
+      els
+        .map((el) => el.textContent.trim())
+        .filter((text) => /%/.test(text) && text.length < 120)
+    )
+    .catch(() => []);
+  if (fallback.length) {
+    console.log(`[scraper] fallback material texts ->`, fallback);
+  } else {
+    console.log("[scraper] no materials found in fallback scan");
+  }
+  return fallback;
+}
 
-        console.log("materialSimp: " + JSON.stringify(materialSimp))
-        for (const material in materialSimp) {
-
-          // Query MongoDB to find the material in the collection
-          const foundMaterial = await coll.findOne({ name: material });
-
-          // If material not found in the database, update materialNames object
-          if (!foundMaterial) {
-              // Increase the percentage of UNKNOWN material by the percentage of the missing material
-              materialSimp.UNKNOWN += materialSimp[material];
-              // Remove the missing material from the materialNames object
-              delete materialSimp[material];
-          } else if (material != "UNKNOWN") { 
-            // add material to score if it's found in database and it's not unknown, 
-            // bc unknown percentage can still change, therefore add it at the end
-            // (materialSimp[key] / 100) signify the percentage of the current material, ex: 75/100 is 0.75
-            score = score + parseInt(foundMaterial.score) * (materialSimp[material] / 100);
-          }
-      }
-      // add unknown material to the total score, assume it's netural eco friendly (50 out of 100) 
-      if (materialSimp.hasOwnProperty('UNKNOWN')) {
-        score = score + 50 * (materialSimp["UNKNOWN"] / 100);
-      }
-
-
-      console.log("materialSimp: " + JSON.stringify(materialSimp))
-
-        /*
-        const query = coll.find();
-
-        console.log("materialSimp: " + JSON.stringify(materialSimp))
-
-        console.log("query below: ")
-        for (const key in materialSimp) {
-          for await (const dbMaterial of query) {
-            // dbMaterial is from the mongodb, it is all uppercase
-            if (dbMaterial.name === key.toUpperCase()) {
-              score = score + materials.score * (parseInt(materialSimp[key]) / 100);
-            }
-          }
+function parseMaterials(materialTexts) {
+  const materials = new Map();
+  materialTexts.forEach((text) => {
+    const sentenceParts = text.split(",").map((item) => item.trim());
+    sentenceParts.forEach((part) => {
+      const match = part.match(/(\d+)%\s*(.+)/i);
+      if (match) {
+        const percentage = parseInt(match[1], 10);
+        const materialName = match[2].toUpperCase();
+        if (!materials.has(materialName)) {
+          materials.set(materialName, percentage);
         }
-        */
-      } finally {
-        // Ensures that the client will close when you finish/error
-        await client.close();
-
-        // return the score (at most two decimal digits) and material list, 
-        const roundedScore = parseFloat(score.toFixed(2))
-        
-        return {materialScore: roundedScore, materialList: materialSimp};
-      }
-    }
-    // run().catch(console.dir);
-    return await run();
-  } catch (err) {
-  console.error(err);
-}
-}
-
-const scrapeImage = async (url) => {
-  try {
-    let {data} = await axios.get(url, config);
-    const $ = cheerio.load(data);
-    //const imageElements = $('img');
-    // get the first <img> that contains the word webcontent in its src attribute
-    const imageElements = $("img[src*='webcontent']")[0];
-    let imageSrc = $(imageElements).attr('src');
-    // need "https://" as part of the image link for the <img> tag to work!!!
-    let imageUrl = 'https://oldnavy.gapcanada.ca'.concat(imageSrc);
-    return imageUrl;
-    /*
-    imageElements.each((index, element) => {
-      let imageSrc = $(element).attr('src');
-      // if (imageSrc.includes('hm.com'))
-      if (imageSrc.includes('webcontent')) {
-        imageUrl = 'https://oldnavy.gapcanada.ca'.concat(imageSrc);
-        console.log(imageUrl);
       }
     });
-    return imageUrl;
-    */
-  } catch (err) {
-    console.error(err);
+  });
+  return materials;
+}
+
+async function scoreMaterials(materialTexts) {
+  const materials = parseMaterials(materialTexts);
+  let totalPercentage = 0;
+  const materialSimp = {};
+
+  for (const [name, pct] of materials.entries()) {
+    if (totalPercentage + pct <= 100) {
+      materialSimp[name] = pct;
+      totalPercentage += pct;
+    } else {
+      break;
+    }
   }
+
+  if (totalPercentage < 100) {
+    materialSimp.UNKNOWN = 100 - totalPercentage;
+  }
+
+  const client = new MongoClient(uri);
+  let score = 0;
+
+  try {
+    await client.connect();
+    const coll = client.db("db").collection("Materials");
+
+    for (const material of Object.keys(materialSimp)) {
+      if (material === "UNKNOWN") continue;
+      const foundMaterial = await coll.findOne({ name: material });
+
+      if (!foundMaterial) {
+        materialSimp.UNKNOWN = (materialSimp.UNKNOWN || 0) + materialSimp[material];
+        delete materialSimp[material];
+      } else {
+        score += parseInt(foundMaterial.score, 10) * (materialSimp[material] / 100);
+      }
+    }
+
+    if (materialSimp.UNKNOWN) {
+      score += UNKNOWN_MATERIAL_SCORE * (materialSimp.UNKNOWN / 100);
+    }
+
+    return {
+      materialScore: parseFloat(score.toFixed(2)),
+      materialList: materialSimp,
+    };
+  } finally {
+    await client.close();
+  }
+}
+
+async function scrapeProduct(url) {
+  return withProductPage(url, async (page) => {
+    const [name, materialTexts, image] = await Promise.all([
+      extractName(page),
+      extractMaterialTexts(page),
+      extractImage(page),
+    ]);
+
+    console.log(`[scraper] extracted name="${name}", image="${image}", materialsCount=${materialTexts.length}`);
+    const materials = await scoreMaterials(materialTexts);
+    return { name, materials, image };
+  });
 }
 
 module.exports = {
-  scrapeImage,
-  scrapeMaterials,
-  scrapeName
-}
+  scrapeProduct,
+  // Backwards-compatible exports; these will each trigger a new page load.
+  scrapeName: async (url) => (await scrapeProduct(url)).name,
+  scrapeMaterials: async (url) => (await scrapeProduct(url)).materials,
+  scrapeImage: async (url) => (await scrapeProduct(url)).image,
+};

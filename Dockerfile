@@ -1,20 +1,17 @@
-# Use the official Node.js image as a base
-FROM node:latest
+# Backend container for the scraper API (Playwright + Node).
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy
 
-# Set the working directory in the container
-WORKDIR /usr/src/app
-
-# Copy package.json and package-lock.json to the working directory
-COPY package*.json ./
+WORKDIR /app
 
 # Install dependencies
-RUN npm install
+COPY package*.json ./
+RUN npm install --production
 
-# Copy the rest of the application code to the working directory
+# Copy source
 COPY . .
 
-# Expose port 3000 to allow communication to/from the container
-EXPOSE 3000
+ENV PORT=5000
+EXPOSE 5000
 
-# Start the React application
-CMD ["npm", "start"]
+# Start the server
+CMD ["node", "server/server.js"]

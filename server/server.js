@@ -12,10 +12,15 @@ app.use(express.urlencoded({     // to support URL-encoded data such as form dat
 
 app.get('/scrape', async function (req, res) {
   const url = req.query["url"]
-  const name = await scraper.scrapeName(url)
-  const materials = await scraper.scrapeMaterials(url)
-  const image = await scraper.scrapeImage(url)
-  res.json({name, materials, image})
+  console.log(`[scrape] incoming url=${url}`)
+  try {
+    const { name, materials, image } = await scraper.scrapeProduct(url)
+    console.log(`[scrape] success url=${url}`)
+    res.json({name, materials, image})
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to scrape product', details: err.message })
+  }
 })
 
 app.listen(5000)

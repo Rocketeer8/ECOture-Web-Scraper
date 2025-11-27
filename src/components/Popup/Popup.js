@@ -20,10 +20,10 @@ const Popup = (properties) => {
                   // Object.entries(obj) returns an array containing key-value pairs
                   // Each key-value pair is represented as an array with two elements: a key and a value
                   Object.entries(properties.materials.materialList).map(([key, value]) => (
-                    // need to wrap everything in a single dom element <></>
-                    <>
+                    // React.Fragment with key to satisfy unique key requirement
+                    <React.Fragment key={key}>
                       - {key}: {value}% <br />
-                    </>
+                    </React.Fragment>
                   ))
                 }
               </p>

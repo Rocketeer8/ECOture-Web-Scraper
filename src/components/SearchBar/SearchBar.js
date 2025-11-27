@@ -11,18 +11,15 @@ const SearchBar = () => {
   const [searching, setSearching] = useState(false); // Add a searching state for loading
   const [searched, setSearched] = useState(false);
 
-  const config = {
-    header: {
-      "Access-Control-Allow-Origin": "*"
-    },
-  };
+  const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
 
   const onSearch = async () => {
     // searching is true after after search button is clicked, and became false after scraping and loading everything
     setSearching(true); // Set searching to true while waiting for response
     try {
-      const { data } = await axios.get(`http://danny-proxy-server.best:5000/scrape?url=${itemUrl}`, config);
-      // const { data } = await axios.get(`http://10.0.0.67:5000/scrape?url=${itemUrl}`, config);
+      const { data } = await axios.get(`${API_BASE}/scrape`, {
+        params: { url: itemUrl },
+      });
       setName(data.name);
       setImage(data.image);
       setMaterials(data.materials);
