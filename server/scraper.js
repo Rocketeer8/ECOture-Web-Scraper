@@ -15,10 +15,14 @@ const MATERIAL_SELECTORS = [
 const UNKNOWN_MATERIAL_SCORE = 50; // assumed neutral score for unknown materials
 
 async function withProductPage(url, handler) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-http2", "--disable-features=IsolateOrigins,site-per-process"],
+  });
   const context = await browser.newContext({
     userAgent: USER_AGENT,
     locale: "en-US",
+    ignoreHTTPSErrors: true,
   });
   // Skip loading heavy assets to speed up hydration.
   await context.route(
